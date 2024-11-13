@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Receive Files</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full bg-white rounded-lg shadow-lg p-6">
+        <h2 class="text-2xl font-semibold mb-4">Session Key: {{ session.key }}</h2>
+        <input type="file" id="fileInput" class="block w-full text-gray-700">
+        <button class="bg-blue-500 text-white w-full py-2 rounded mt-4" onclick="uploadFile()">Upload File</button>
+
+        <div id="fileList" class="mt-6 space-y-2">
+            {% for file in files %}
+                <div class="flex justify-between items-center border p-2 rounded bg-gray-50">
+                    <span>{{ file.file.name }}</span>
+                    <span>{{ file.file.size|filesizeformat }} KB</span>
+                    <a href="{{ file.file.url }}" class="text-blue-500" download>Download</a>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('file', file);
+
+            await fetch(`/upload/{{ session.key }}/`, {
+                method: 'POST',
+                body: formData
+            });
+            loadFiles();
+        }
+
+        async function loadFiles() {
+            const response = await fetch(`/get_files/{{ session.key }}/`);
+            const files = await response.json();
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+
+            files.forEach(file => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'flex justify-between items-center border p-2 rounded bg-gray-50';
+                fileItem.innerHTML = `
+                    <span>${file.name}</span>
+                    <span>${file.size} KB</span>
+                    <a href="${file.url}" class="text-blue-500" download>Download</a>
+                `;
+                fileList.appendChild(fileItem);
+            });
+        }
+
+        setInterval(loadFiles, 2000);  // Poll every 2 seconds for new files
+        loadFiles();
+    </script>
+</body>
+</html>
